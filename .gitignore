@@ -1,0 +1,7 @@
+*kafka*
+*hadoop*
+*hbase*
+*spark*
+*airflow*
+venv/
+.venv/
