@@ -1,0 +1,27 @@
+FROM python:3.8-slim
+
+WORKDIR /app
+
+# Cài đặt các package cần thiết
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements và cài đặt
+COPY requirements.flask.txt .
+RUN pip install -r requirements.flask.txt
+
+# Copy source code
+COPY . .
+
+# Debug mode
+ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 5000
+
+# Run Flask app
+CMD ["python", "app.py"]

@@ -1,0 +1,23 @@
+FROM python:3.8-slim
+
+WORKDIR /app
+
+# Cài đặt dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements và cài đặt
+COPY Stream_layer/requirements.stream.txt .
+RUN pip install -r requirements.stream.txt
+
+# Copy source code
+COPY . .
+
+# Debug mode
+ENV PYTHONUNBUFFERED=1
+
+# Run stream pipeline
+CMD ["python", "Stream_layer/stream_pipeline.py"]
