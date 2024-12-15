@@ -6,7 +6,8 @@ import happybase
 
 
 def insert_dataHbase(data):
-    connection = happybase.Connection('localhost')
+    # connection = happybase.Connection('localhost')
+    connection = happybase.Connection('hbase')
     connection.open()
 
     if b'smartphone' not in connection.tables():
