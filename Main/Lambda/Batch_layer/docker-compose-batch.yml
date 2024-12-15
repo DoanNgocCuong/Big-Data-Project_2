@@ -114,23 +114,28 @@ services:
     networks:
       - batch_network
 
+  # Sửa phần kafka service
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka-batch
     depends_on:
       - zookeeper
     ports:
-      - "9093:9092"  # Changed port to avoid conflict
+      - "9092:9092"
+      - "9093:9093"
     environment:
-      KAFKA_MESSAGE_MAX_BYTES: 209715200
-      KAFKA_REPLICA_FETCH_MAX_BYTES: 209715200
-      KAFKA_MAX_REQUEST_SIZE: 209715200
+      # Các config cũ giữ nguyên
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_MESSAGE_MAX_BYTES: 2000000000  # Tăng max message size
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 2000000000
+      KAFKA_MAX_REQUEST_SIZE: 2000000000
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 2000000000
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 1024000
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 1024000
+      KAFKA_MAX_PARTITION_FETCH_BYTES: 2000000000
     networks:
       - batch_network
 
