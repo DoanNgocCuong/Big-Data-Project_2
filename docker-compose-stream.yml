@@ -1,122 +1,145 @@
 version: '3.8'
 
 services:
-  # Zookeeper Service
+  # 1. Zookeeper Service
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
     container_name: zookeeper
     ports:
-      - "2181:2181"  # Zookeeper port
+      - "2181:2181"
     networks:
       - stream-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Kafka Service
+  # 2. Kafka Service
   kafka:
     image: wurstmeister/kafka:2.13-2.6.0
     container_name: kafka
     ports:
-      - "9092:9092"  # Kafka broker port
+      - "9092:9092"
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CREATE_TOPICS: "smartphoneTopic:1:1"
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     networks:
       - stream-network
 
-  # Hadoop NameNode Service
+  # 3. Hadoop NameNode
   hadoop-namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: hadoop-namenode
     ports:
-      - "9870:9870"  # NameNode Web UI
-      - "9000:9000"  # NameNode RPC
+      - "9870:9870"
+      - "9000:9000"
     environment:
-      - CLUSTER_NAME=hadoop-cluster
+      - CLUSTER_NAME=test-cluster
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
     networks:
       - stream-network
 
-  # Hadoop DataNode Service
+  # 4. Hadoop DataNode
   hadoop-datanode:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: hadoop-datanode
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
     volumes:
       - hadoop_datanode:/hadoop/dfs/data
+    environment:
+      - SERVICE_PRECONDITION=hadoop-namenode:9870
     depends_on:
       - hadoop-namenode
     networks:
       - stream-network
 
-  # YARN ResourceManager Service
+  # 5. YARN ResourceManager
   yarn-resourcemanager:
     image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
     container_name: yarn-resourcemanager
     ports:
-      - "8088:8088"  # ResourceManager Web UI
-    environment:
-      - YARN_CONF_yarn_resourcemanager_hostname=yarn-resourcemanager
-      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
-      - YARN_CONF_yarn_resourcemanager_address=yarn-resourcemanager:8032
-      - YARN_CONF_yarn_resourcemanager_webapp_address=yarn-resourcemanager:8088
+      - "8088:8088"
     depends_on:
       - hadoop-namenode
-      - hadoop-datanode
     networks:
       - stream-network
 
-  # YARN NodeManager Service
+  # 6. YARN NodeManager
   yarn-nodemanager:
     image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
     container_name: yarn-nodemanager
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
-      - YARN_CONF_yarn_resourcemanager_hostname=yarn-resourcemanager
     depends_on:
       - yarn-resourcemanager
-      - hadoop-namenode
-      - hadoop-datanode
     networks:
       - stream-network
 
-  # HBase Master Service
-  hbase-master:
+  # 7. HBase with Thrift
+  hbase:
     image: dajobe/hbase
-    container_name: hbase-master
+    container_name: hbase
     ports:
-      - "16000:16000"  # HBase Master RPC
-      - "16010:16010"  # HBase Master Web UI
-      - "16020:16020"  # HBase RegionServer RPC
-      - "16030:16030"  # HBase RegionServer Web UI
+      - "16000:16000"
+      - "16010:16010"
+      - "16020:16020"
+      - "16030:16030"
+      - "9090:9090"
     environment:
-      - HBASE_MANAGES_ZK=true
-      - ZOOKEEPER_QUORUM=zookeeper
+      HBASE_CONF_hbase_zookeeper_quorum: zookeeper
+      HBASE_CONF_hbase_zookeeper_property_clientPort: 2181
+      HBASE_MANAGES_ZK: "false"
+    volumes:
+      - hbase_data:/data
     depends_on:
       - zookeeper
       - hadoop-namenode
-      - hadoop-datanode
     networks:
       - stream-network
+    command: ["sh", "-c", "start-hbase.sh && hbase thrift start -p 9090 && tail -f /dev/null"]
 
-  # HBase Thrift Server Service
-  hbase-thrift:
-    image: iwan0/hbase-thrift-standalone
-    container_name: hbase-thrift
-    ports:
-      - "9090:9090"  # HBase Thrift Server
+  # 8. Python Stream Pipeline
+  stream-pipeline:
+    build:
+      context: ./Main/Lambda
+      dockerfile: Stream_layer/Dockerfile.stream
+    container_name: stream-pipeline
+    volumes:
+      - ./Main/Lambda/Stream_layer:/app/Stream_layer
+      - ./Main/Lambda/Stream_data:/app/Stream_data
+      - ./Main/Lambda/ML_operations:/app/ML_operations
+      - ./Main/Lambda/producer.py:/app/producer.py
     environment:
-      - HBASE_ZOOKEEPER_QUORUM=zookeeper
-      - HBASE_ZOOKEEPER_CLIENT_PORT=2181
+      - KAFKA_HOST=kafka
+      - KAFKA_PORT=9092
+      - HBASE_HOST=hbase
+      - HBASE_PORT=9090
     depends_on:
-      - hbase-master
+      - kafka
+      - hbase
     networks:
       - stream-network
 
+  # 9. Flask Web App
+  flask-webapp:
+    build:
+      context: ./Main/Lambda/real_time_web_app(Flask)
+      dockerfile: Dockerfile.flask
+    container_name: flask-webapp
+    ports:
+      - "5000:5000"
+    environment:
+      - HBASE_HOST=hbase
+      - HBASE_PORT=9090
+    depends_on:
+      - hbase
+    networks:
+      - stream-network
 
 networks:
   stream-network:
@@ -125,3 +148,4 @@ networks:
 volumes:
   hadoop_namenode:
   hadoop_datanode:
+  hbase_data:
