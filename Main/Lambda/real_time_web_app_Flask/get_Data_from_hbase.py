@@ -6,7 +6,7 @@ def decode_dict(d):
 def get_last_record_from_hbase():
     # Establish a connection to HBase
     # connection = happybase.Connection('localhost')  # Assuming HBase is running locally
-    connection = happybase.Connection('hbase', port=16000)  # Assuming HBase is running locally
+    connection = happybase.Connection('hbase')  # Assuming HBase is running locally
     connection.open()
 # PS D:\OneDrive - Hanoi University of Science and Technology\GIT\BigData-Project\Big-Data-Project_2\Main\Lambda> docker network ls
 # NETWORK ID     NAME                    DRIVER    SCOPE

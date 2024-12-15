@@ -144,9 +144,13 @@ services:
       - "5000:5000"
     volumes:
       - ./real_time_web_app_Flask:/app
+      - ./real_time_web_app_Flask/templates:/app/templates
+      - ./real_time_web_app_Flask/static:/app/static
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=development
+      - HBASE_HOST=hbase  # Thêm biến môi trường cho HBase
+      - HBASE_PORT=9090      
     depends_on:
       - stream-pipeline
     networks:
