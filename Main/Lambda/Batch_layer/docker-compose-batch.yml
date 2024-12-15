@@ -21,8 +21,6 @@ services:
   webserver:
     image: apache/airflow:2.6.0-python3.9
     container_name: airflow-webserver
-    command: webserver
-    entrypoint: ['/opt/airflow/scripts/entrypoint.sh']
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,18 +28,21 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
-      - AIRFLOW_WEBSERVER_SECRET_KEY=this_is_a_very_secured_key
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secured_key
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
     volumes:
-      - ./dags:/opt/airflow/dags:rw
-      - ./scripts/entrypoint.sh:/opt/airflow/scripts/entrypoint.sh:rw
-      - ./requirements.txt:/opt/airflow/requirements.txt:rw
+      - .:/opt/airflow/batch_layer
+      - ./dags:/opt/airflow/dags
+      - ./batch_layer.py:/opt/airflow/batch_layer/batch_layer.py
+      - ./spark_tranformation.py:/opt/airflow/batch_layer/spark_tranformation.py
+      - ./save_data_postgresql.py:/opt/airflow/batch_layer/save_data_postgresql.py
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 30s
-      retries: 3
+    command: bash -c "airflow db init && airflow webserver"
     networks:
       - batch_network
 
@@ -49,17 +50,15 @@ services:
     image: apache/airflow:2.6.0-python3.9
     container_name: airflow-scheduler
     depends_on:
-      webserver:
-        condition: service_healthy
-    volumes:
-      - ./dags:/opt/airflow/dags:rw
-      - ./scripts/entrypoint.sh:/opt/airflow/scripts/entrypoint.sh:rw
-      - ./requirements.txt:/opt/airflow/requirements.txt:rw
+      - webserver
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
-    command: bash -c "pip install -r /opt/airflow/requirements.txt && airflow db upgrade && airflow scheduler"
+    volumes:
+      - .:/opt/airflow/batch_layer
+      - ./dags:/opt/airflow/dags
+    command: airflow scheduler
     networks:
       - batch_network
 
@@ -94,6 +93,11 @@ services:
       - "2182:2181"  # Changed port to avoid conflict
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 0
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_MAX_SESSION_TIMEOUT: 40000
+      ZOOKEEPER_MIN_SESSION_TIMEOUT: 4000
     networks:
       - batch_network
 
@@ -105,6 +109,9 @@ services:
     ports:
       - "9093:9092"  # Changed port to avoid conflict
     environment:
+      KAFKA_MESSAGE_MAX_BYTES: 209715200
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 209715200
+      KAFKA_MAX_REQUEST_SIZE: 209715200
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
@@ -114,9 +121,107 @@ services:
     networks:
       - batch_network
 
-networks:
-  batch_network:
-    driver: bridge
+  # 4. Hadoop Services
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    ports:
+      - "9870:9870"  # Namenode UI
+      - "9000:9000"  # HDFS
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - HDFS_CONF_dfs_webhdfs_enabled=true
+      - HDFS_CONF_dfs_permissions_enabled=false
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - batch_network
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    restart: always
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"  # Datanode UI
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SERVICE_PRECONDITION=namenode:9870
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9864"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - batch_network
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: always
+    depends_on:
+      - namenode
+      - datanode
+    ports:
+      - "8088:8088"  # Resource Manager UI
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - YARN_CONF_yarn_resourcemanager_recovery_enabled=true
+      - YARN_CONF_yarn_resourcemanager_store_class=org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
+      - YARN_CONF_yarn_resourcemanager_scheduler_class=org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler
+      - YARN_CONF_yarn_scheduler_capacity_root_default_maximum___allocation___mb=8192
+      - YARN_CONF_yarn_scheduler_capacity_root_default_maximum___allocation___vcores=4
+      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - batch_network
+
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    restart: always
+    depends_on:
+      - namenode
+      - datanode
+      - resourcemanager
+    ports:
+      - "8042:8042"  # Node Manager UI
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+      - YARN_CONF_yarn_nodemanager_aux___services=mapreduce_shuffle
+      - SERVICE_PRECONDITION=resourcemanager:8088
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8042"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - batch_network
 
 volumes:
   postgres-db-volume:
+    driver: local
+  hadoop_namenode:
+    driver: local
+  hadoop_datanode:
+    driver: local
+
+networks:
+  batch_network:
+    driver: bridge
