@@ -1,3 +1,4 @@
+version: '3'
 services:
   # 1. Zookeeper Service
   zookeeper:
@@ -114,14 +115,14 @@ services:
   # 8. Python Stream Pipeline
   stream-pipeline:
     build:
-      context: ./Main/Lambda
+      context: .
       dockerfile: Stream_layer/Dockerfile.stream
     container_name: stream-pipeline
     volumes:
-      - ./Main/Lambda/Stream_layer:/app/Stream_layer
-      - ./Main/Lambda/Stream_data:/app/Stream_data
-      - ./Main/Lambda/ML_operations:/app/ML_operations
-      - ./Main/Lambda/producer.py:/app/producer.py
+      - ./Stream_layer:/app/Stream_layer
+      - ./Stream_data:/app/Stream_data
+      - ./ML_operations:/app/ML_operations
+      - ./producer.py:/app/producer.py
     environment:
       - KAFKA_HOST=kafka
       - KAFKA_PORT=9092
@@ -136,16 +137,18 @@ services:
   # 9. Flask Web App
   flask-webapp:
     build:
-      context: ./Main/Lambda/real_time_web_app(Flask)
-      dockerfile: Dockerfile.flask
+      context: .
+      dockerfile: real_time_web_app_Flask/Dockerfile.flask
     container_name: flask-webapp
     ports:
       - "5000:5000"
+    volumes:
+      - ./real_time_web_app_Flask:/app
     environment:
-      - HBASE_HOST=hbase
-      - HBASE_PORT=9090
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
     depends_on:
-      - hbase
+      - stream-pipeline
     networks:
       - stream-network
 
