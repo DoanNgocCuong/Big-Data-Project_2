@@ -66,6 +66,14 @@ services:
   spark-master:
     image: bitnami/spark:latest
     container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_MESSAGE_MAX_SIZE=2047
+      - SPARK_NETWORK_MAX_MESSAGE_SIZE=2047
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
     ports:
       - "9090:8080"
       - "7077:7077"
@@ -75,13 +83,18 @@ services:
   spark-worker:
     image: bitnami/spark:latest
     container_name: spark-worker
-    depends_on:
-      - spark-master
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=1G
       - SPARK_WORKER_CORES=1
+      - SPARK_RPC_MESSAGE_MAX_SIZE=2047
+      - SPARK_NETWORK_MAX_MESSAGE_SIZE=2047
+      - SPARK_WORKER_WEBUI_PORT=8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      - spark-master
     networks:
       - batch_network
 
