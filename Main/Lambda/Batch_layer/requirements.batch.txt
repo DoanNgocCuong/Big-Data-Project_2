@@ -1,0 +1,8 @@
+apache-airflow==2.8.2
+apache-airflow-providers-apache-spark
+apache-airflow-providers-apache-hdfs
+kafka-python
+pyspark
+hdfs
+psycopg2-binary
+redis

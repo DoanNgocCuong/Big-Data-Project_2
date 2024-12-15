@@ -1,0 +1,122 @@
+version: '3'
+
+services:
+  # 1. Airflow Services
+  postgres:
+    image: postgres:14.0
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    networks:
+      - batch_network
+
+  webserver:
+    image: apache/airflow:2.6.0-python3.9
+    container_name: airflow-webserver
+    command: webserver
+    entrypoint: ['/opt/airflow/scripts/entrypoint.sh']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW_WEBSERVER_SECRET_KEY=this_is_a_very_secured_key
+    volumes:
+      - ./dags:/opt/airflow/dags:rw
+      - ./scripts/entrypoint.sh:/opt/airflow/scripts/entrypoint.sh:rw
+      - ./requirements.txt:/opt/airflow/requirements.txt:rw
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - batch_network
+
+  scheduler:
+    image: apache/airflow:2.6.0-python3.9
+    container_name: airflow-scheduler
+    depends_on:
+      webserver:
+        condition: service_healthy
+    volumes:
+      - ./dags:/opt/airflow/dags:rw
+      - ./scripts/entrypoint.sh:/opt/airflow/scripts/entrypoint.sh:rw
+      - ./requirements.txt:/opt/airflow/requirements.txt:rw
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    command: bash -c "pip install -r /opt/airflow/requirements.txt && airflow db upgrade && airflow scheduler"
+    networks:
+      - batch_network
+
+  # 2. Spark Services  
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    networks:
+      - batch_network
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    networks:
+      - batch_network
+
+  # 3. Kafka Services
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper-batch
+    ports:
+      - "2182:2181"  # Changed port to avoid conflict
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - batch_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka-batch
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093:9092"  # Changed port to avoid conflict
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - batch_network
+
+networks:
+  batch_network:
+    driver: bridge
+
+volumes:
+  postgres-db-volume:
