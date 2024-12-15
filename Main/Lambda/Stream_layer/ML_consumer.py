@@ -5,7 +5,8 @@ from transform import  transformation
 from Stream_layer.insert_data_hbase import insert_dataHbase
 def consum():
     # Kafka broker configuration
-    bootstrap_servers = 'localhost:9092'
+    # bootstrap_servers = 'localhost:9092'
+    bootstrap_servers = 'kafka:9092'
     topic = 'smartphoneTopic'
 
     # Create a Kafka consumer
