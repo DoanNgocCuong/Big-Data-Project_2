@@ -5,10 +5,12 @@ services:
   postgres:
     image: postgres:14.0
     container_name: postgres
+
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
       - POSTGRES_DB=airflow
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
@@ -17,6 +19,10 @@ services:
       retries: 5
     networks:
       - batch_network
+    ports:
+      - "5432:5432"
+
+
 
   webserver:
     image: apache/airflow:2.6.0-python3.9
@@ -25,10 +31,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secured_key
       - _AIRFLOW_DB_UPGRADE=true
       - _AIRFLOW_WWW_USER_CREATE=true
@@ -42,7 +49,7 @@ services:
       - ./save_data_postgresql.py:/opt/airflow/batch_layer/save_data_postgresql.py
     ports:
       - "8080:8080"
-    command: bash -c "airflow db init && airflow webserver"
+    command: bash -c "airflow db init && airflow db upgrade && airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.com && airflow webserver"
     networks:
       - batch_network
 
@@ -256,7 +263,7 @@ services:
       - batch_network
 
 # Control Center **Phòng điều khiển:**
-# Cho phép giám sát hoạt động của băng chuyền và sửa lỗi nếu có sự cố.                                                                       |
+# Cho phép giám sát hoạt động của băng chuyền và s���a lỗi nếu có sự cố.                                                                       |
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.4.0
     hostname: control-center
