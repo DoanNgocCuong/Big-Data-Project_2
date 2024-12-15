@@ -1,0 +1,22 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libc6-dev \
+        python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy requirements trước
+COPY ./real_time_web_app_Flask/requirements.flask.txt requirements.flask.txt
+RUN pip install -r requirements.flask.txt
+
+# Copy toàn bộ code
+COPY ./real_time_web_app_Flask .
+
+EXPOSE 5000
+
+# Chạy app.py
+CMD ["python", "-u", "app.py"]

@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 from get_Data_from_hbase import get_last_record_from_hbase
 import logging
 from datetime import datetime

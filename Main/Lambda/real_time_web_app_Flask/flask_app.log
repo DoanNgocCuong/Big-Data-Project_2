@@ -1,0 +1,131 @@
+2024-12-15 08:49:31,282 - __main__ - INFO - Flask server starting...
+2024-12-15 08:49:31,283 - __main__ - DEBUG - Testing HBase connection...
+2024-12-15 08:49:31,283 - happybase.connection - DEBUG - Opening Thrift transport to localhost:9090
+2024-12-15 08:49:31,287 - __main__ - ERROR - Failed to connect to HBase
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 98, in open
+    self.sock.connect(addr)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app.py", line 74, in <module>
+    test_record = get_last_record_from_hbase()
+  File "/app/get_Data_from_hbase.py", line 8, in get_last_record_from_hbase
+    connection = happybase.Connection('localhost')  # Assuming HBase is running locally
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 148, in __init__
+    self.open()
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 176, in open
+    self.transport.open()
+  File "thriftpy2/transport/buffered/cybuffered.pyx", line 34, in thriftpy2.transport.buffered.cybuffered.TCyBufferedTransport.open
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 105, in open
+    raise TTransportException(
+thriftpy2.transport.base.TTransportException: TTransportException(type=1, message="Could not connect to ('localhost', 9090)")
+2024-12-15 08:49:31,305 - __main__ - INFO - Debug mode: False
+2024-12-15 08:49:31,306 - __main__ - INFO - Template folder: templates
+2024-12-15 08:49:31,306 - __main__ - INFO - Static folder: /app/static
+2024-12-15 08:49:31,325 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.0.10:5000
+2024-12-15 08:49:31,326 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-15 08:49:31,328 - werkzeug - INFO -  * Restarting with stat
+2024-12-15 08:49:31,936 - __main__ - INFO - Flask server starting...
+2024-12-15 08:49:31,937 - __main__ - DEBUG - Testing HBase connection...
+2024-12-15 08:49:31,937 - happybase.connection - DEBUG - Opening Thrift transport to localhost:9090
+2024-12-15 08:49:31,938 - __main__ - ERROR - Failed to connect to HBase
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 98, in open
+    self.sock.connect(addr)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app.py", line 74, in <module>
+    test_record = get_last_record_from_hbase()
+  File "/app/get_Data_from_hbase.py", line 8, in get_last_record_from_hbase
+    connection = happybase.Connection('localhost')  # Assuming HBase is running locally
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 148, in __init__
+    self.open()
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 176, in open
+    self.transport.open()
+  File "thriftpy2/transport/buffered/cybuffered.pyx", line 34, in thriftpy2.transport.buffered.cybuffered.TCyBufferedTransport.open
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 105, in open
+    raise TTransportException(
+thriftpy2.transport.base.TTransportException: TTransportException(type=1, message="Could not connect to ('localhost', 9090)")
+2024-12-15 08:49:31,946 - __main__ - INFO - Debug mode: False
+2024-12-15 08:49:31,947 - __main__ - INFO - Template folder: templates
+2024-12-15 08:49:31,947 - __main__ - INFO - Static folder: /app/static
+2024-12-15 08:49:31,955 - werkzeug - WARNING -  * Debugger is active!
+2024-12-15 08:49:31,957 - werkzeug - INFO -  * Debugger PIN: 313-709-761
+2024-12-15 08:53:40,267 - __main__ - DEBUG - Request Headers: Host: localhost:5000
+Connection: keep-alive
+Sec-Ch-Ua: "Not(A:Brand";v="99", "Microsoft Edge";v="133", "Chromium";v="133"
+Sec-Ch-Ua-Mobile: ?0
+Sec-Ch-Ua-Platform: "Windows"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-US,en;q=0.9
+Cookie: ajs_anonymous_id=d6890c2a-df96-4659-83c3-25772e8be038; session=2c2125fd-d54e-41ba-9c0b-877fd9351daf.w5vo96njEefitTd5m5jVLG23g4k
+
+
+2024-12-15 08:53:40,268 - __main__ - DEBUG - Request Method: GET
+2024-12-15 08:53:40,268 - __main__ - DEBUG - Request URL: http://localhost:5000/
+2024-12-15 08:53:40,269 - __main__ - DEBUG - New request received at 2024-12-15 08:53:40.269612
+2024-12-15 08:53:40,270 - __main__ - DEBUG - Attempting to fetch data from HBase...
+2024-12-15 08:53:40,270 - happybase.connection - DEBUG - Opening Thrift transport to localhost:9090
+2024-12-15 08:53:40,271 - __main__ - ERROR - Error occurred: TTransportException(type=1, message="Could not connect to ('localhost', 9090)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 98, in open
+    self.sock.connect(addr)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app.py", line 28, in index
+    last_record = get_last_record_from_hbase()
+  File "/app/get_Data_from_hbase.py", line 8, in get_last_record_from_hbase
+    connection = happybase.Connection('localhost')  # Assuming HBase is running locally
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 148, in __init__
+    self.open()
+  File "/usr/local/lib/python3.10/site-packages/happybase/connection.py", line 176, in open
+    self.transport.open()
+  File "thriftpy2/transport/buffered/cybuffered.pyx", line 34, in thriftpy2.transport.buffered.cybuffered.TCyBufferedTransport.open
+  File "/usr/local/lib/python3.10/site-packages/thriftpy2/transport/socket.py", line 105, in open
+    raise TTransportException(
+thriftpy2.transport.base.TTransportException: TTransportException(type=1, message="Could not connect to ('localhost', 9090)")
+2024-12-15 08:53:40,274 - __main__ - DEBUG - Response Status: 500 INTERNAL SERVER ERROR
+2024-12-15 08:53:40,275 - __main__ - DEBUG - Response Headers: Content-Type: text/html; charset=utf-8
+Content-Length: 98
+
+
+2024-12-15 08:53:40,276 - werkzeug - INFO - 172.20.0.1 - - [15/Dec/2024 08:53:40] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2024-12-15 08:53:42,180 - __main__ - DEBUG - Request Headers: Host: localhost:5000
+Connection: keep-alive
+Sec-Ch-Ua-Platform: "Windows"
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0
+Sec-Ch-Ua: "Not(A:Brand";v="99", "Microsoft Edge";v="133", "Chromium";v="133"
+Sec-Ch-Ua-Mobile: ?0
+Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: no-cors
+Sec-Fetch-Dest: image
+Referer: http://localhost:5000/
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-US,en;q=0.9
+Cookie: ajs_anonymous_id=d6890c2a-df96-4659-83c3-25772e8be038; session=2c2125fd-d54e-41ba-9c0b-877fd9351daf.w5vo96njEefitTd5m5jVLG23g4k
+
+
+2024-12-15 08:53:42,181 - __main__ - DEBUG - Request Method: GET
+2024-12-15 08:53:42,182 - __main__ - DEBUG - Request URL: http://localhost:5000/favicon.ico
+2024-12-15 08:53:42,182 - __main__ - ERROR - Page not found: http://localhost:5000/favicon.ico
+2024-12-15 08:53:42,193 - werkzeug - INFO - 172.20.0.1 - - [15/Dec/2024 08:53:42] "[35m[1mGET /favicon.ico HTTP/1.1[0m" 500 -
