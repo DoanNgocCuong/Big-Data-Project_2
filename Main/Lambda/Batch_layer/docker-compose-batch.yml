@@ -111,6 +111,9 @@ services:
       ZOOKEEPER_INIT_LIMIT: 5
       ZOOKEEPER_MAX_SESSION_TIMEOUT: 40000
       ZOOKEEPER_MIN_SESSION_TIMEOUT: 4000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     networks:
       - batch_network
 
@@ -147,6 +150,15 @@ services:
       KAFKA_NUM_IO_THREADS: 8
       KAFKA_BACKGROUND_THREADS: 10
       KAFKA_QUEUED_MAX_REQUESTS: 500
+
+      # Thêm các config sau
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     networks:
       - batch_network
 
@@ -243,12 +255,51 @@ services:
     networks:
       - batch_network
 
+# Control Center **Phòng điều khiển:**
+# Cho phép giám sát hoạt động của băng chuyền và sửa lỗi nếu có sự cố.                                                                       |
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.4.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      - kafka
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'kafka:9092'
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      CONFLIENT_METRICS_ENABLE: 'false'
+      # Thêm các config sau
+      CONTROL_CENTER_STREAMS_NUM_STREAM_THREADS: 1
+      CONTROL_CENTER_COMMAND_TOPIC_REPLICATION: 1
+      CONTROL_CENTER_METRICS_TOPIC_REPLICATION: 1
+      CONTROL_CENTER_STREAMS_CONSUMER_REQUEST_TIMEOUT_MS: 960000
+      CONTROL_CENTER_STREAMS_PRODUCER_REQUEST_TIMEOUT_MS: 960000
+      PORT: 9021
+    networks:
+      - batch_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
 volumes:
   postgres-db-volume:
     driver: local
   hadoop_namenode:
     driver: local
   hadoop_datanode:
+    driver: local
+  kafka_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_log:
     driver: local
 
 networks:
