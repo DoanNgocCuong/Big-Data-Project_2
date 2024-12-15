@@ -1,12 +1,12 @@
-version: '3.8'
-
 services:
   # 1. Zookeeper Service
   zookeeper:
-    image: wurstmeister/zookeeper:3.4.6
+    image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
     ports:
       - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
     networks:
       - stream-network
     healthcheck:
@@ -17,7 +17,7 @@ services:
 
   # 2. Kafka Service
   kafka:
-    image: wurstmeister/kafka:2.13-2.6.0
+    image: confluentinc/cp-kafka:latest
     container_name: kafka
     ports:
       - "9092:9092"
@@ -46,6 +46,11 @@ services:
       - hadoop_namenode:/hadoop/dfs/name
     networks:
       - stream-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # 4. Hadoop DataNode
   hadoop-datanode:
@@ -56,7 +61,8 @@ services:
     environment:
       - SERVICE_PRECONDITION=hadoop-namenode:9870
     depends_on:
-      - hadoop-namenode
+      hadoop-namenode:
+        condition: service_healthy
     networks:
       - stream-network
 
@@ -97,8 +103,10 @@ services:
     volumes:
       - hbase_data:/data
     depends_on:
-      - zookeeper
-      - hadoop-namenode
+      zookeeper:
+        condition: service_healthy
+      hadoop-namenode:
+        condition: service_healthy
     networks:
       - stream-network
     command: ["sh", "-c", "start-hbase.sh && hbase thrift start -p 9090 && tail -f /dev/null"]
